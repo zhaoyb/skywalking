@@ -46,6 +46,13 @@ public class MongoDBInterceptor implements InstanceMethodsAroundInterceptor, Ins
 
     private static final ILog logger = LogManager.getLogger(MongoDBInterceptor.class);
 
+    /**
+     *
+     * 调用构造函数时调用
+     *
+     * @param objInst
+     * @param allArguments
+     */
     @Override
     public void onConstruct(EnhancedInstance objInst, Object[] allArguments) {
         Cluster cluster = (Cluster) allArguments[0];
@@ -53,6 +60,15 @@ public class MongoDBInterceptor implements InstanceMethodsAroundInterceptor, Ins
         objInst.setSkyWalkingDynamicField(peers);
     }
 
+    /**
+     * 调用方法前调用
+     *
+     * @param objInst
+     * @param method
+     * @param allArguments
+     * @param argumentsTypes
+     * @param result change this result, if you want to truncate the method.
+     */
     @Override
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
         MethodInterceptResult result) {
@@ -64,6 +80,17 @@ public class MongoDBInterceptor implements InstanceMethodsAroundInterceptor, Ins
         MongoSpanHelper.createExitSpan(executeMethod, remotePeer, allArguments[0]);
     }
 
+    /**
+     *
+     * 调用方法后 调用
+     *
+     * @param objInst
+     * @param method
+     * @param allArguments
+     * @param argumentsTypes
+     * @param ret the method's original return value. May be null if the method triggers an exception.
+     * @return
+     */
     @Override
     public Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
         Object ret) {
@@ -71,6 +98,7 @@ public class MongoDBInterceptor implements InstanceMethodsAroundInterceptor, Ins
         return ret;
     }
 
+    // 方法异常时 调用
     @Override
     public void handleMethodException(EnhancedInstance objInst, Method method, Object[] allArguments,
         Class<?>[] argumentsTypes, Throwable t) {

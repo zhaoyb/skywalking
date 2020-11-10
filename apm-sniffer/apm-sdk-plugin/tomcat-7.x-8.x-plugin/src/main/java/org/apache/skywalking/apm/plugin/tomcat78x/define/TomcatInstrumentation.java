@@ -31,39 +31,64 @@ import static org.apache.skywalking.apm.agent.core.plugin.match.NameMatch.byName
 public class TomcatInstrumentation extends ClassInstanceMethodsEnhancePluginDefine {
 
     /**
+     *
+     * 增强类
      * Enhance class.
      */
     private static final String ENHANCE_CLASS = "org.apache.catalina.core.StandardHostValve";
 
     /**
+     * 正常调用拦截类
+     *
      * The intercept class for "invoke" method in the class "org.apache.catalina.core.StandardWrapperValve"
      */
     private static final String INVOKE_INTERCEPT_CLASS = "org.apache.skywalking.apm.plugin.tomcat78x.TomcatInvokeInterceptor";
 
     /**
+     * 异常拦截类
+     *
      * The intercept class for "exception" method in the class "org.apache.catalina.core.StandardWrapperValve"
      */
     private static final String EXCEPTION_INTERCEPT_CLASS = "org.apache.skywalking.apm.plugin.tomcat78x.TomcatExceptionInterceptor";
 
+    /**
+     *
+     * 类名
+     *
+     * @return
+     */
     @Override
     protected ClassMatch enhanceClass() {
         return byName(ENHANCE_CLASS);
     }
 
+    /**
+     * 构造函数增强
+     *
+     * @return
+     */
     @Override
     public ConstructorInterceptPoint[] getConstructorsInterceptPoints() {
         return null;
     }
 
+    /**
+     * 方法增强
+     *
+     * @return
+     */
     @Override
     public InstanceMethodsInterceptPoint[] getInstanceMethodsInterceptPoints() {
         return new InstanceMethodsInterceptPoint[] {
+                // 拦截器A
             new InstanceMethodsInterceptPoint() {
+                // 要拦截的方法名
                 @Override
                 public ElementMatcher<MethodDescription> getMethodsMatcher() {
                     return named("invoke");
                 }
 
+                // 适用的切面方法
                 @Override
                 public String getMethodsInterceptor() {
                     return INVOKE_INTERCEPT_CLASS;
@@ -74,6 +99,7 @@ public class TomcatInstrumentation extends ClassInstanceMethodsEnhancePluginDefi
                     return false;
                 }
             },
+                // 拦截器B
             new InstanceMethodsInterceptPoint() {
                 @Override
                 public ElementMatcher<MethodDescription> getMethodsMatcher() {

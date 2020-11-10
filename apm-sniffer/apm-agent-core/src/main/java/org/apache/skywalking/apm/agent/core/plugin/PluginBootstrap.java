@@ -36,12 +36,16 @@ public class PluginBootstrap {
     /**
      * load all plugins.
      *
+     * 加载所有插件
+     *
      * @return plugin definition list.
      */
     public List<AbstractClassEnhancePluginDefine> loadPlugins() throws AgentPackageNotFoundException {
         AgentClassLoader.initDefaultLoader();
 
+        //plugin 资源解析
         PluginResourcesResolver resolver = new PluginResourcesResolver();
+        // 加载所有的 kywalking-plugin.def文件
         List<URL> resources = resolver.getResources();
 
         if (resources == null || resources.size() == 0) {
@@ -49,6 +53,7 @@ public class PluginBootstrap {
             return new ArrayList<AbstractClassEnhancePluginDefine>();
         }
 
+        // 解析 kywalking-plugin.def文件， 放入List<PluginDefine>
         for (URL pluginUrl : resources) {
             try {
                 PluginCfg.INSTANCE.load(pluginUrl.openStream());
@@ -57,14 +62,18 @@ public class PluginBootstrap {
             }
         }
 
+        // 所有插件配置
         List<PluginDefine> pluginClassList = PluginCfg.INSTANCE.getPluginClassList();
 
+        // 类增强插件
         List<AbstractClassEnhancePluginDefine> plugins = new ArrayList<AbstractClassEnhancePluginDefine>();
         for (PluginDefine pluginDefine : pluginClassList) {
             try {
                 logger.debug("loading plugin class {}.", pluginDefine.getDefineClass());
+                // 将插件配置类，全部通过反射实例化， 转为AbstractClassEnhancePluginDefine， 这件插件本身也是继承于 AbstractClassEnhancePluginDefine
                 AbstractClassEnhancePluginDefine plugin = (AbstractClassEnhancePluginDefine) Class.forName(pluginDefine.getDefineClass(), true, AgentClassLoader
                     .getDefault()).newInstance();
+                // 实例放入集合
                 plugins.add(plugin);
             } catch (Throwable t) {
                 logger.error(t, "load plugin [{}] failure.", pluginDefine.getDefineClass());

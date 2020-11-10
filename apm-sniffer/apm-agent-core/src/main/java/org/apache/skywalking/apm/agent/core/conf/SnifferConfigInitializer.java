@@ -72,11 +72,13 @@ public class SnifferConfigInitializer {
         }
 
         try {
+            // 用环境变量覆盖系统配置
             overrideConfigBySystemProp();
         } catch (Exception e) {
             logger.error(e, "Failed to read the system properties.");
         }
 
+        //用命令行 覆盖系统配置
         agentOptions = StringUtil.trim(agentOptions, ',');
         if (!StringUtil.isEmpty(agentOptions)) {
             try {
@@ -89,11 +91,14 @@ public class SnifferConfigInitializer {
             }
         }
 
+        // 将property初始化为config
         initializeConfig(Config.class);
 
+        // 服务名称
         if (StringUtil.isEmpty(Config.Agent.SERVICE_NAME)) {
             throw new ExceptionInInitializerError("`agent.service_name` is missing.");
         }
+        // 收集服务器IP
         if (StringUtil.isEmpty(Config.Collector.BACKEND_SERVICE)) {
             throw new ExceptionInInitializerError("`collector.backend_service` is missing.");
         }
@@ -187,12 +192,16 @@ public class SnifferConfigInitializer {
     }
 
     /**
+     * 加载指定的配置文件或者默认配置文件
+     *
      * Load the specified config file or default config file
      *
      * @return the config file {@link InputStream}, or null if not needEnhance.
      */
     private static InputStreamReader loadConfig() throws AgentPackageNotFoundException, ConfigNotFoundException {
+        // 获取系统指定的配置文件路径
         String specifiedConfigPath = System.getProperty(SPECIFIED_CONFIG_PATH);
+        // 如果不存在，就用系统默认配置文件路径
         File configFile = StringUtil.isEmpty(specifiedConfigPath) ? new File(
             AgentPackagePath.getPath(), DEFAULT_CONFIG_FILE_NAME) : new File(specifiedConfigPath);
 

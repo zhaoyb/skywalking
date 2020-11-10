@@ -28,6 +28,8 @@ import org.apache.skywalking.apm.agent.core.plugin.bytebuddy.ClassCacheMode;
 import org.apache.skywalking.apm.util.Length;
 
 /**
+ * agent 核心配置类
+ *
  * This is the core config in sniffer agent.
  */
 public class Config {
@@ -268,6 +270,7 @@ public class Config {
         public static int PEER_MAX_LENGTH = 200;
 
         /**
+         * 排除激活的插件
          * Exclude activated plugins
          */
         public static String EXCLUDE_PLUGINS = "";

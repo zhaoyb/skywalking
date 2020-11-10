@@ -46,6 +46,7 @@ public class PluginFinder {
 
     public PluginFinder(List<AbstractClassEnhancePluginDefine> plugins) {
         for (AbstractClassEnhancePluginDefine plugin : plugins) {
+            // 获取要增强的类
             ClassMatch match = plugin.enhanceClass();
 
             if (match == null) {
@@ -54,6 +55,7 @@ public class PluginFinder {
 
             if (match instanceof NameMatch) {
                 NameMatch nameMatch = (NameMatch) match;
+                // 注意这里是一个Linklist,也就是说，一个类，有可能会有多个增强？
                 LinkedList<AbstractClassEnhancePluginDefine> pluginDefines = nameMatchDefine.get(nameMatch.getClassName());
                 if (pluginDefines == null) {
                     pluginDefines = new LinkedList<AbstractClassEnhancePluginDefine>();

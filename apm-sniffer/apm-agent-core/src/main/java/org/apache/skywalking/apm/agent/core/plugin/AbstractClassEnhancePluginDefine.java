@@ -36,19 +36,22 @@ import org.apache.skywalking.apm.util.StringUtil;
  * {@link ClassEnhancePluginDefine}
  */
 public abstract class AbstractClassEnhancePluginDefine {
+
     private static final ILog logger = LogManager.getLogger(AbstractClassEnhancePluginDefine.class);
 
     /**
+     * 增强类入口
+     *
      * Main entrance of enhancing the class.
      *
-     * @param typeDescription target class description.
-     * @param builder         byte-buddy's builder to manipulate target class's bytecode.
-     * @param classLoader     load the given transformClass
+     * @param typeDescription target class description.  目标类描述
+     * @param builder byte-buddy's builder to manipulate target class's bytecode.
+     * @param classLoader load the given transformClass  加载指定的 transformClass
      * @return the new builder, or <code>null</code> if not be enhanced.
      * @throws PluginException when set builder failure.
      */
     public DynamicType.Builder<?> define(TypeDescription typeDescription, DynamicType.Builder<?> builder,
-        ClassLoader classLoader, EnhanceContext context) throws PluginException {
+                                         ClassLoader classLoader, EnhanceContext context) throws PluginException {
         String interceptorDefineClassName = this.getClass().getName();
         String transformClassName = typeDescription.getTypeName();
         if (StringUtil.isEmpty(transformClassName)) {
@@ -83,9 +86,11 @@ public abstract class AbstractClassEnhancePluginDefine {
     }
 
     protected abstract DynamicType.Builder<?> enhance(TypeDescription typeDescription,
-        DynamicType.Builder<?> newClassBuilder, ClassLoader classLoader, EnhanceContext context) throws PluginException;
+                                                      DynamicType.Builder<?> newClassBuilder, ClassLoader classLoader, EnhanceContext context) throws PluginException;
 
     /**
+     * 要增强的类
+     *
      * Define the {@link ClassMatch} for filtering class.
      *
      * @return {@link ClassMatch}
@@ -93,6 +98,9 @@ public abstract class AbstractClassEnhancePluginDefine {
     protected abstract ClassMatch enhanceClass();
 
     /**
+     * 区分类
+     * 这个区分类的作用类似于， 如果有两个版本 1.0  2.0, 假如在做拦截的时候，如何区分他们？ 这里是用一个类来标注 ， 这个标注类只包含在在某个特定的版本中
+     *
      * Witness classname list. Why need witness classname? Let's see like this: A library existed two released versions
      * (like 1.0, 2.0), which include the same target classes, but because of version iterator, they may have the same
      * name, but different methods, or different method arguments list. So, if I want to target the particular version
@@ -101,7 +109,7 @@ public abstract class AbstractClassEnhancePluginDefine {
      * com.company.1.x.A, only in 1.0 ), and you can achieve the goal.
      */
     protected String[] witnessClasses() {
-        return new String[] {};
+        return new String[]{};
     }
 
     public boolean isBootstrapInstrumentation() {
@@ -109,6 +117,7 @@ public abstract class AbstractClassEnhancePluginDefine {
     }
 
     /**
+     * 构造函数切入点
      * Constructor methods intercept point. See {@link ConstructorInterceptPoint}
      *
      * @return collections of {@link ConstructorInterceptPoint}
@@ -116,6 +125,7 @@ public abstract class AbstractClassEnhancePluginDefine {
     public abstract ConstructorInterceptPoint[] getConstructorsInterceptPoints();
 
     /**
+     * 实例方法切入点
      * Instance methods intercept point. See {@link InstanceMethodsInterceptPoint}
      *
      * @return collections of {@link InstanceMethodsInterceptPoint}
@@ -123,6 +133,8 @@ public abstract class AbstractClassEnhancePluginDefine {
     public abstract InstanceMethodsInterceptPoint[] getInstanceMethodsInterceptPoints();
 
     /**
+     * 静态方法切入点
+     *
      * Static methods intercept point. See {@link StaticMethodsInterceptPoint}
      *
      * @return collections of {@link StaticMethodsInterceptPoint}

@@ -18,6 +18,10 @@
 
 package org.apache.skywalking.apm.agent;
 
+import static net.bytebuddy.matcher.ElementMatchers.nameContains;
+import static net.bytebuddy.matcher.ElementMatchers.nameStartsWith;
+import static net.bytebuddy.matcher.ElementMatchers.not;
+
 import java.lang.instrument.Instrumentation;
 import java.util.List;
 import net.bytebuddy.ByteBuddy;
@@ -45,14 +49,13 @@ import org.apache.skywalking.apm.agent.core.plugin.bootstrap.BootstrapInstrument
 import org.apache.skywalking.apm.agent.core.plugin.bytebuddy.CacheableTransformerDecorator;
 import org.apache.skywalking.apm.agent.core.plugin.jdk9module.JDK9ModuleExporter;
 
-import static net.bytebuddy.matcher.ElementMatchers.nameContains;
-import static net.bytebuddy.matcher.ElementMatchers.nameStartsWith;
-import static net.bytebuddy.matcher.ElementMatchers.not;
-
 /**
  * The main entrance of sky-walking agent, based on javaagent mechanism.
+ *
+ * java agent入口
  */
 public class SkyWalkingAgent {
+
     private static final ILog logger = LogManager.getLogger(SkyWalkingAgent.class);
 
     /**
@@ -61,8 +64,14 @@ public class SkyWalkingAgent {
     public static void premain(String agentArgs, Instrumentation instrumentation) throws PluginException {
         final PluginFinder pluginFinder;
         try {
+            //初始化agent
             SnifferConfigInitializer.initializeCoreConfig(agentArgs);
-
+            /**
+             * 1. 找到所有的插件
+             * 2. 通过反射实例化所有插件
+             * 3. 放入PluginFinder类
+             *
+             */
             pluginFinder = new PluginFinder(new PluginBootstrap().loadPlugins());
         } catch (AgentPackageNotFoundException ape) {
             logger.error(ape, "Locate agent.jar failure. Shutting down.");
@@ -72,17 +81,19 @@ public class SkyWalkingAgent {
             return;
         }
 
-        final ByteBuddy byteBuddy = new ByteBuddy().with(TypeValidation.of(Config.Agent.IS_OPEN_DEBUGGING_CLASS));
 
+        // 实例化bytebuddy
+        final ByteBuddy byteBuddy = new ByteBuddy().with(TypeValidation.of(Config.Agent.IS_OPEN_DEBUGGING_CLASS));
+        // 实例化agentbuilder
         AgentBuilder agentBuilder = new AgentBuilder.Default(byteBuddy).ignore(
-            nameStartsWith("net.bytebuddy.").or(nameStartsWith("org.slf4j."))
-                                            .or(nameStartsWith("org.groovy."))
-                                            .or(nameContains("javassist"))
-                                            .or(nameContains(".asm."))
-                                            .or(nameContains(".reflectasm."))
-                                            .or(nameStartsWith("sun.reflect"))
-                                            .or(allSkyWalkingAgentExcludeToolkit())
-                                            .or(ElementMatchers.isSynthetic()));
+                nameStartsWith("net.bytebuddy.").or(nameStartsWith("org.slf4j."))
+                                                .or(nameStartsWith("org.groovy."))
+                                                .or(nameContains("javassist"))
+                                                .or(nameContains(".asm."))
+                                                .or(nameContains(".reflectasm."))
+                                                .or(nameStartsWith("sun.reflect"))
+                                                .or(allSkyWalkingAgentExcludeToolkit())
+                                                .or(ElementMatchers.isSynthetic()));
 
         JDK9ModuleExporter.EdgeClasses edgeClasses = new JDK9ModuleExporter.EdgeClasses();
         try {
@@ -111,20 +122,24 @@ public class SkyWalkingAgent {
         agentBuilder.type(pluginFinder.buildMatch())
                     .transform(new Transformer(pluginFinder))
                     .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                    //监听器
                     .with(new Listener())
                     .installOn(instrumentation);
 
         try {
+            // 开启所有服务
             ServiceManager.INSTANCE.boot();
         } catch (Exception e) {
             logger.error(e, "Skywalking agent boot failure.");
         }
 
+        // 注册关闭服务
         Runtime.getRuntime()
                .addShutdownHook(new Thread(ServiceManager.INSTANCE::shutdown, "skywalking service shutdown thread"));
     }
 
     private static class Transformer implements AgentBuilder.Transformer {
+
         private PluginFinder pluginFinder;
 
         Transformer(PluginFinder pluginFinder) {
@@ -141,8 +156,7 @@ public class SkyWalkingAgent {
                 DynamicType.Builder<?> newBuilder = builder;
                 EnhanceContext context = new EnhanceContext();
                 for (AbstractClassEnhancePluginDefine define : pluginDefines) {
-                    DynamicType.Builder<?> possibleNewBuilder = define.define(
-                        typeDescription, newBuilder, classLoader, context);
+                    DynamicType.Builder<?> possibleNewBuilder = define.define(typeDescription, newBuilder, classLoader, context);
                     if (possibleNewBuilder != null) {
                         newBuilder = possibleNewBuilder;
                     }
@@ -164,6 +178,7 @@ public class SkyWalkingAgent {
     }
 
     private static class Listener implements AgentBuilder.Listener {
+
         @Override
         public void onDiscovery(String typeName, ClassLoader classLoader, JavaModule module, boolean loaded) {
 

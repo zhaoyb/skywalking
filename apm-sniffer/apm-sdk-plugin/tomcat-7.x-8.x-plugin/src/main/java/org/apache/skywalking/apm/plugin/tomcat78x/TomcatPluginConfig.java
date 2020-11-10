@@ -20,6 +20,10 @@ package org.apache.skywalking.apm.plugin.tomcat78x;
 
 import org.apache.skywalking.apm.agent.core.boot.PluginConfig;
 
+/**
+ * 配置类
+ *
+ */
 public class TomcatPluginConfig {
     public static class Plugin {
         @PluginConfig(root = TomcatPluginConfig.class)

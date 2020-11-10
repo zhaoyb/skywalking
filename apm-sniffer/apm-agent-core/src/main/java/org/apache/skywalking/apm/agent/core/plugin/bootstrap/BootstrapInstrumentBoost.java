@@ -18,6 +18,8 @@
 
 package org.apache.skywalking.apm.agent.core.plugin.bootstrap;
 
+import static net.bytebuddy.matcher.ElementMatchers.named;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,24 +47,23 @@ import org.apache.skywalking.apm.agent.core.plugin.interceptor.StaticMethodsInte
 import org.apache.skywalking.apm.agent.core.plugin.jdk9module.JDK9ModuleExporter;
 import org.apache.skywalking.apm.agent.core.plugin.loader.AgentClassLoader;
 
-import static net.bytebuddy.matcher.ElementMatchers.named;
-
 /**
  * If there is Bootstrap instrumentation plugin declared in plugin list, BootstrapInstrumentBoost inject the necessary
  * classes into bootstrap class loader, including generated dynamic delegate classes.
  */
 public class BootstrapInstrumentBoost {
+
     private static final ILog logger = LogManager.getLogger(BootstrapInstrumentBoost.class);
 
     private static final String[] HIGH_PRIORITY_CLASSES = {
-        "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.BootstrapInterRuntimeAssist",
-        "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor",
-        "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceConstructorInterceptor",
-        "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.StaticMethodsAroundInterceptor",
-        "org.apache.skywalking.apm.agent.core.plugin.bootstrap.IBootstrapLog",
-        "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance",
-        "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.OverrideCallable",
-        "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult"
+            "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.BootstrapInterRuntimeAssist",
+            "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor",
+            "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceConstructorInterceptor",
+            "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.StaticMethodsAroundInterceptor",
+            "org.apache.skywalking.apm.agent.core.plugin.bootstrap.IBootstrapLog",
+            "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance",
+            "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.OverrideCallable",
+            "org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult"
     };
 
     private static String INSTANCE_METHOD_DELEGATE_TEMPLATE = "org.apache.skywalking.apm.agent.core.plugin.bootstrap.template.InstanceMethodInterTemplate";
@@ -72,9 +73,10 @@ public class BootstrapInstrumentBoost {
     private static String STATIC_METHOD_WITH_OVERRIDE_ARGS_DELEGATE_TEMPLATE = "org.apache.skywalking.apm.agent.core.plugin.bootstrap.template.StaticMethodInterWithOverrideArgsTemplate";
 
     public static AgentBuilder inject(PluginFinder pluginFinder, Instrumentation instrumentation,
-        AgentBuilder agentBuilder, JDK9ModuleExporter.EdgeClasses edgeClasses) throws PluginException {
+                                      AgentBuilder agentBuilder, JDK9ModuleExporter.EdgeClasses edgeClasses) throws PluginException {
         Map<String, byte[]> classesTypeMap = new HashMap<String, byte[]>();
 
+        // 生成代理
         if (!prepareJREInstrumentation(pluginFinder, classesTypeMap)) {
             return agentBuilder;
         }
@@ -129,35 +131,42 @@ public class BootstrapInstrumentBoost {
     }
 
     /**
+     * 动态代理
      * Generate dynamic delegate for ByteBuddy
      *
-     * @param pluginFinder   gets the whole plugin list.
+     * @param pluginFinder gets the whole plugin list.
      * @param classesTypeMap hosts the class binary.
      * @return true if have JRE instrumentation requirement.
      * @throws PluginException when generate failure.
      */
     private static boolean prepareJREInstrumentation(PluginFinder pluginFinder,
-        Map<String, byte[]> classesTypeMap) throws PluginException {
+                                                     Map<String, byte[]> classesTypeMap) throws PluginException {
+
         TypePool typePool = TypePool.Default.of(BootstrapInstrumentBoost.class.getClassLoader());
+
         List<AbstractClassEnhancePluginDefine> bootstrapClassMatchDefines = pluginFinder.getBootstrapClassMatchDefine();
+
         for (AbstractClassEnhancePluginDefine define : bootstrapClassMatchDefines) {
+            //实例方法
             for (InstanceMethodsInterceptPoint point : define.getInstanceMethodsInterceptPoints()) {
                 if (point.isOverrideArgs()) {
                     generateDelegator(classesTypeMap, typePool, INSTANCE_METHOD_WITH_OVERRIDE_ARGS_DELEGATE_TEMPLATE, point
-                        .getMethodsInterceptor());
+                            .getMethodsInterceptor());
                 } else {
                     generateDelegator(classesTypeMap, typePool, INSTANCE_METHOD_DELEGATE_TEMPLATE, point.getMethodsInterceptor());
                 }
             }
 
+            //构造函数
             for (ConstructorInterceptPoint point : define.getConstructorsInterceptPoints()) {
                 generateDelegator(classesTypeMap, typePool, CONSTRUCTOR_DELEGATE_TEMPLATE, point.getConstructorInterceptor());
             }
 
+            //静态方法
             for (StaticMethodsInterceptPoint point : define.getStaticMethodsInterceptPoints()) {
                 if (point.isOverrideArgs()) {
                     generateDelegator(classesTypeMap, typePool, STATIC_METHOD_WITH_OVERRIDE_ARGS_DELEGATE_TEMPLATE, point
-                        .getMethodsInterceptor());
+                            .getMethodsInterceptor());
                 } else {
                     generateDelegator(classesTypeMap, typePool, STATIC_METHOD_DELEGATE_TEMPLATE, point.getMethodsInterceptor());
                 }
@@ -171,19 +180,19 @@ public class BootstrapInstrumentBoost {
      * <p>
      * One key step to avoid class confliction between AppClassLoader and BootstrapClassLoader
      *
-     * @param classesTypeMap    hosts injected binary of generated class
-     * @param typePool          to generate new class
+     * @param classesTypeMap hosts injected binary of generated class
+     * @param typePool to generate new class
      * @param templateClassName represents the class as template in this generation process. The templates are
-     *                          pre-defined in SkyWalking agent core.
+     * pre-defined in SkyWalking agent core.
      */
     private static void generateDelegator(Map<String, byte[]> classesTypeMap, TypePool typePool,
-        String templateClassName, String methodsInterceptor) {
+                                          String templateClassName, String methodsInterceptor) {
         String internalInterceptorName = internalDelegate(methodsInterceptor);
         try {
             TypeDescription templateTypeDescription = typePool.describe(templateClassName).resolve();
 
             DynamicType.Unloaded interceptorType = new ByteBuddy().redefine(templateTypeDescription, ClassFileLocator.ForClassLoader
-                .of(BootstrapInstrumentBoost.class.getClassLoader()))
+                    .of(BootstrapInstrumentBoost.class.getClassLoader()))
                                                                   .name(internalInterceptorName)
                                                                   .field(named("TARGET_INTERCEPTOR"))
                                                                   .value(methodsInterceptor)
@@ -202,10 +211,10 @@ public class BootstrapInstrumentBoost {
      * instrumentation active by any plugin
      *
      * @param loadedTypeMap hosts all injected class
-     * @param className     to load
+     * @param className to load
      */
     private static void loadHighPriorityClass(Map<String, byte[]> loadedTypeMap,
-        String className) throws PluginException {
+                                              String className) throws PluginException {
         byte[] enhancedInstanceClassFile;
         try {
             String classResourceName = className.replaceAll("\\.", "/") + ".class";

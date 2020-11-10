@@ -73,6 +73,7 @@ public class InstMethodsInter {
 
         MethodInterceptResult result = new MethodInterceptResult();
         try {
+            // 调用方法前
             interceptor.beforeMethod(targetObject, method, allArguments, method.getParameterTypes(), result);
         } catch (Throwable t) {
             logger.error(t, "class[{}] before method[{}] intercept failure", obj.getClass(), method.getName());
@@ -83,10 +84,12 @@ public class InstMethodsInter {
             if (!result.isContinue()) {
                 ret = result._ret();
             } else {
+                //调用
                 ret = zuper.call();
             }
         } catch (Throwable t) {
             try {
+                // 处理异常
                 interceptor.handleMethodException(targetObject, method, allArguments, method.getParameterTypes(), t);
             } catch (Throwable t2) {
                 logger.error(t2, "class[{}] handle method[{}] exception failure", obj.getClass(), method.getName());
@@ -94,6 +97,7 @@ public class InstMethodsInter {
             throw t;
         } finally {
             try {
+                //调用方法后
                 ret = interceptor.afterMethod(targetObject, method, allArguments, method.getParameterTypes(), ret);
             } catch (Throwable t) {
                 logger.error(t, "class[{}] after method[{}] intercept failure", obj.getClass(), method.getName());

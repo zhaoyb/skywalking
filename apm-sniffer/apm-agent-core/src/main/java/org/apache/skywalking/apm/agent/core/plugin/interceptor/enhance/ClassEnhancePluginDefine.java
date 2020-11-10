@@ -18,6 +18,11 @@
 
 package org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance;
 
+import static net.bytebuddy.jar.asm.Opcodes.ACC_PRIVATE;
+import static net.bytebuddy.jar.asm.Opcodes.ACC_VOLATILE;
+import static net.bytebuddy.matcher.ElementMatchers.isStatic;
+import static net.bytebuddy.matcher.ElementMatchers.not;
+
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
@@ -40,18 +45,22 @@ import org.apache.skywalking.apm.agent.core.plugin.interceptor.InstanceMethodsIn
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.StaticMethodsInterceptPoint;
 import org.apache.skywalking.apm.util.StringUtil;
 
-import static net.bytebuddy.jar.asm.Opcodes.ACC_PRIVATE;
-import static net.bytebuddy.jar.asm.Opcodes.ACC_VOLATILE;
-import static net.bytebuddy.matcher.ElementMatchers.isStatic;
-import static net.bytebuddy.matcher.ElementMatchers.not;
-
 /**
+ * 增强定义类
+ *
+ * 可以这样理解这样类的作用：
+ * 在基于spring开发中，如果某个类需要增强，则需要标注出来， 即需要一份清单 说明某某类需要增强，在spring中可以用xml定义切面或者加注解
+ * 在skywalking中，如果某个类需要增强，则需要定义个类出来，这个类里面会有几个方法，分别返回这个类要增加的方法。
+ *
+ *
+ *
  * This class controls all enhance operations, including enhance constructors, instance methods and static methods. All
  * the enhances base on three types interceptor point: {@link ConstructorInterceptPoint}, {@link
  * InstanceMethodsInterceptPoint} and {@link StaticMethodsInterceptPoint} If plugin is going to enhance constructors,
  * instance methods, or both, {@link ClassEnhancePluginDefine} will add a field of {@link Object} type.
  */
 public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePluginDefine {
+
     private static final ILog logger = LogManager.getLogger(ClassEnhancePluginDefine.class);
 
     /**
@@ -68,9 +77,10 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
      */
     @Override
     protected DynamicType.Builder<?> enhance(TypeDescription typeDescription, DynamicType.Builder<?> newClassBuilder,
-        ClassLoader classLoader, EnhanceContext context) throws PluginException {
+                                             ClassLoader classLoader, EnhanceContext context) throws PluginException {
+        // 拦截静态方法
         newClassBuilder = this.enhanceClass(typeDescription, newClassBuilder, classLoader);
-
+        // 拦截实例方法
         newClassBuilder = this.enhanceInstance(typeDescription, newClassBuilder, classLoader, context);
 
         return newClassBuilder;
@@ -84,11 +94,15 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
      * @return new byte-buddy's builder for further manipulation.
      */
     private DynamicType.Builder<?> enhanceInstance(TypeDescription typeDescription,
-        DynamicType.Builder<?> newClassBuilder, ClassLoader classLoader,
-        EnhanceContext context) throws PluginException {
+                                                   DynamicType.Builder<?> newClassBuilder, ClassLoader classLoader,
+                                                   EnhanceContext context) throws PluginException {
+        // 构造函数
         ConstructorInterceptPoint[] constructorInterceptPoints = getConstructorsInterceptPoints();
+        // 实例方法
         InstanceMethodsInterceptPoint[] instanceMethodsInterceptPoints = getInstanceMethodsInterceptPoints();
+        // 目标类型
         String enhanceOriginClassName = typeDescription.getTypeName();
+
         boolean existedConstructorInterceptPoint = false;
         if (constructorInterceptPoints != null && constructorInterceptPoints.length > 0) {
             existedConstructorInterceptPoint = true;
@@ -123,6 +137,8 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
         }
 
         /**
+         *
+         * 构造函数
          * 2. enhance constructors
          */
         if (existedConstructorInterceptPoint) {
@@ -131,18 +147,21 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
                     newClassBuilder = newClassBuilder.constructor(constructorInterceptPoint.getConstructorMatcher())
                                                      .intercept(SuperMethodCall.INSTANCE.andThen(MethodDelegation.withDefaultConfiguration()
                                                                                                                  .to(BootstrapInstrumentBoost
-                                                                                                                     .forInternalDelegateClass(constructorInterceptPoint
-                                                                                                                         .getConstructorInterceptor()))));
+                                                                                                                             .forInternalDelegateClass(constructorInterceptPoint
+                                                                                                                                                               .getConstructorInterceptor()))));
                 } else {
                     newClassBuilder = newClassBuilder.constructor(constructorInterceptPoint.getConstructorMatcher())
                                                      .intercept(SuperMethodCall.INSTANCE.andThen(MethodDelegation.withDefaultConfiguration()
                                                                                                                  .to(new ConstructorInter(constructorInterceptPoint
-                                                                                                                     .getConstructorInterceptor(), classLoader))));
+                                                                                                                                                  .getConstructorInterceptor(), classLoader))));
                 }
             }
         }
 
         /**
+         *
+         * 实例方法
+         *
          * 3. enhance instance methods
          */
         if (existedMethodsInterceptPoints) {
@@ -187,12 +206,15 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
     /**
      * Enhance a class to intercept class static methods.
      *
+     * 增强类拦截静态方法
+     *
      * @param typeDescription target class description
      * @param newClassBuilder byte-buddy's builder to manipulate class bytecode.
      * @return new byte-buddy's builder for further manipulation.
      */
     private DynamicType.Builder<?> enhanceClass(TypeDescription typeDescription, DynamicType.Builder<?> newClassBuilder,
-        ClassLoader classLoader) throws PluginException {
+                                                ClassLoader classLoader) throws PluginException {
+        // 静态方法
         StaticMethodsInterceptPoint[] staticMethodsInterceptPoints = getStaticMethodsInterceptPoints();
         String enhanceOriginClassName = typeDescription.getTypeName();
         if (staticMethodsInterceptPoints == null || staticMethodsInterceptPoints.length == 0) {

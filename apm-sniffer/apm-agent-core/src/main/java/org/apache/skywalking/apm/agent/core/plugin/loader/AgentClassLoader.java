@@ -67,6 +67,8 @@ public class AgentClassLoader extends ClassLoader {
     }
 
     /**
+     * 初始化默认的classloader
+     *
      * Init the default class loader.
      *
      * @throws AgentPackageNotFoundException if agent package is not found.
@@ -82,10 +84,14 @@ public class AgentClassLoader extends ClassLoader {
     }
 
     public AgentClassLoader(ClassLoader parent) throws AgentPackageNotFoundException {
+        // 注意这个类继承了ClassLoader
         super(parent);
+        //agent文件路径
         File agentDictionary = AgentPackagePath.getPath();
         classpath = new LinkedList<>();
+        // agent/plugins
         classpath.add(new File(agentDictionary, "plugins"));
+        // agent/activations
         classpath.add(new File(agentDictionary, "activations"));
     }
 

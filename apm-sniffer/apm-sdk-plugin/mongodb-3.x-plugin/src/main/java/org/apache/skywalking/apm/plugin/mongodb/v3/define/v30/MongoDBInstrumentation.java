@@ -43,6 +43,10 @@ public class MongoDBInstrumentation extends ClassInstanceMethodsEnhancePluginDef
 
     private static final String WITNESS_CLASS = "com.mongodb.connection.WriteCommandProtocol";
 
+    /**
+     * 增强类
+     *
+     */
     private static final String ENHANCE_CLASS = "com.mongodb.Mongo";
 
     private static final String INTERCEPTOR_CLASS = "org.apache.skywalking.apm.plugin.mongodb.v3.interceptor.v30.MongoDBInterceptor";
@@ -53,20 +57,34 @@ public class MongoDBInstrumentation extends ClassInstanceMethodsEnhancePluginDef
         return new String[] {WITNESS_CLASS};
     }
 
+    /**
+     * 类
+     *
+     * @return
+     */
     @Override
     protected ClassMatch enhanceClass() {
         return NameMatch.byName(ENHANCE_CLASS);
     }
 
+    /**
+     *
+     * 构造函数
+     *
+     * @return
+     */
     @Override
     public ConstructorInterceptPoint[] getConstructorsInterceptPoints() {
         return new ConstructorInterceptPoint[] {
             new ConstructorInterceptPoint() {
+
+                // 指定构造函数
                 @Override
                 public ElementMatcher<MethodDescription> getConstructorMatcher() {
                     return takesArgumentWithType(0, "com.mongodb.connection.Cluster");
                 }
 
+                // 增强类
                 @Override
                 public String getConstructorInterceptor() {
                     return INTERCEPTOR_CLASS;
@@ -75,6 +93,11 @@ public class MongoDBInstrumentation extends ClassInstanceMethodsEnhancePluginDef
         };
     }
 
+    /**
+     * 方法调用
+     *
+     * @return
+     */
     @Override
     public InstanceMethodsInterceptPoint[] getInstanceMethodsInterceptPoints() {
         return new InstanceMethodsInterceptPoint[] {

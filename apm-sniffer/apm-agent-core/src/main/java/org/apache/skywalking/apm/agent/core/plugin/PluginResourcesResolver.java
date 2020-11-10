@@ -33,10 +33,17 @@ import org.apache.skywalking.apm.agent.core.plugin.loader.AgentClassLoader;
 public class PluginResourcesResolver {
     private static final ILog logger = LogManager.getLogger(PluginResourcesResolver.class);
 
+    /**
+     *
+     * 加载所有的kywalking-plugin.def文件路径
+     *
+     * @return
+     */
     public List<URL> getResources() {
         List<URL> cfgUrlPaths = new ArrayList<URL>();
         Enumeration<URL> urls;
         try {
+            //在每个插件下都会有skywalking-plugin.def文件  路径 ： /resources/skywalking-plugin.def
             urls = AgentClassLoader.getDefault().getResources("skywalking-plugin.def");
 
             while (urls.hasMoreElements()) {

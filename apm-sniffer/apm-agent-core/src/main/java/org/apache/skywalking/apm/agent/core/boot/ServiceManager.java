@@ -40,11 +40,17 @@ public enum ServiceManager {
     public void boot() {
         bootedServices = loadAllServices();
 
+        //依次启动所有服务的prepare
         prepare();
+        //依次启动所有服务的startup
         startup();
+        //依次启动所有服务的onComplete
         onComplete();
     }
 
+    /**
+     * 依次关闭所有服务
+     */
     public void shutdown() {
         for (BootService service : bootedServices.values()) {
             try {
@@ -58,9 +64,12 @@ public enum ServiceManager {
     private Map<Class, BootService> loadAllServices() {
         Map<Class, BootService> bootedServices = new LinkedHashMap<>();
         List<BootService> allServices = new LinkedList<>();
+        //加载所有服务到allServices
         load(allServices);
+
         for (final BootService bootService : allServices) {
             Class<? extends BootService> bootServiceClass = bootService.getClass();
+            //默认实现
             boolean isDefaultImplementor = bootServiceClass.isAnnotationPresent(DefaultImplementor.class);
             if (isDefaultImplementor) {
                 if (!bootedServices.containsKey(bootServiceClass)) {
@@ -86,7 +95,7 @@ public enum ServiceManager {
                             bootedServices.put(targetService, bootService);
                         } else {
                             throw new ServiceConflictException(
-                                "Service " + bootServiceClass + " overrides conflict, " + "exist more than one service want to override :" + targetService);
+                                    "Service " + bootServiceClass + " overrides conflict, " + "exist more than one service want to override :" + targetService);
                         }
                     } else {
                         bootedServices.put(targetService, bootService);
@@ -132,7 +141,7 @@ public enum ServiceManager {
      * Find a {@link BootService} implementation, which is already started.
      *
      * @param serviceClass class name.
-     * @param <T>          {@link BootService} implementation class.
+     * @param <T> {@link BootService} implementation class.
      * @return {@link BootService} instance
      */
     public <T extends BootService> T findService(Class<T> serviceClass) {

@@ -26,7 +26,10 @@ import java.util.List;
 import java.util.ServiceLoader;
 
 /**
+ * 通过SPI 加载自定义的 插件加载器，注意这里是插件加载器， 还不是插件
+ *
  * The plugin can be inserted into the kernel by implementing this spi return PluginDefine list.
+ *
  */
 
 public enum DynamicPluginLoader {

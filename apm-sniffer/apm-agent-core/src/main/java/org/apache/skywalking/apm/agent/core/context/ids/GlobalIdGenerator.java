@@ -31,6 +31,8 @@ public final class GlobalIdGenerator {
     }
 
     /**
+     *
+     * id生成规则
      * Generate a new id, combined by three parts.
      * <p>
      * The first one represents application instance id.

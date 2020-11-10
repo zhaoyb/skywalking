@@ -58,6 +58,8 @@ public class TomcatInvokeInterceptor implements InstanceMethodsAroundInterceptor
     }
 
     /**
+     * 方法调用前执行
+     *
      * * The {@link TraceSegment#refs} of current trace segment will reference to the trace segment id of the previous
      * level if the serialized context is not null.
      *
@@ -75,6 +77,7 @@ public class TomcatInvokeInterceptor implements InstanceMethodsAroundInterceptor
             next.setHeadValue(request.getHeader(next.getHeadKey()));
         }
 
+        // 创建新的span
         AbstractSpan span = ContextManager.createEntrySpan(request.getRequestURI(), contextCarrier);
         Tags.URL.set(span, request.getRequestURL().toString());
         Tags.HTTP.METHOD.set(span, request.getMethod());
@@ -86,6 +89,18 @@ public class TomcatInvokeInterceptor implements InstanceMethodsAroundInterceptor
         }
     }
 
+    /**
+     *
+     * 方法调用后执行
+     *
+     * @param objInst
+     * @param method
+     * @param allArguments
+     * @param argumentsTypes
+     * @param ret the method's original return value. May be null if the method triggers an exception.
+     * @return
+     * @throws Throwable
+     */
     @Override
     public Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
                               Object ret) throws Throwable {

@@ -34,11 +34,15 @@ import org.apache.skywalking.apm.network.language.agent.v3.SegmentObject;
  */
 public class TraceSegment {
     /**
+     * 链路追踪Id
+     *
      * The id of this trace segment. Every segment has its unique-global-id.
      */
     private String traceSegmentId;
 
     /**
+     * 父TraceSegment 数组
+     *
      * The refs of parent trace segments, except the primary one. For most RPC call, {@link #refs} contains only one
      * element, but if this segment is a start span of batch process, the segment faces multi parents, at this moment,
      * we use this {@code #refs} to link them.
@@ -63,10 +67,22 @@ public class TraceSegment {
      */
     private DistributedTraceIds relatedGlobalTraces;
 
+    /**
+     * 是否忽略
+     *
+     */
     private boolean ignore = false;
 
+    /**
+     * 是否超过上限
+     *
+     */
     private boolean isSizeLimited = false;
 
+    /**
+     * 创建时间
+     *
+     */
     private final long createTime;
 
     /**
