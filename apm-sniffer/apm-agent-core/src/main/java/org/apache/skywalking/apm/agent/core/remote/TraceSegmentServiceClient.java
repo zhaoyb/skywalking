@@ -48,7 +48,16 @@ public class TraceSegmentServiceClient implements BootService, IConsumer<TraceSe
     private static final ILog logger = LogManager.getLogger(TraceSegmentServiceClient.class);
 
     private long lastLogTime;
+
+    /**
+     * 上传数据累加器
+     *
+     */
     private long segmentUplinkedCounter;
+    /**
+     * 废弃数据累加器
+     *
+     */
     private long segmentAbandonedCounter;
     private volatile DataCarrier<TraceSegment> carrier;
     private volatile TraceSegmentReportServiceGrpc.TraceSegmentReportServiceStub serviceStub;
@@ -64,8 +73,10 @@ public class TraceSegmentServiceClient implements BootService, IConsumer<TraceSe
         lastLogTime = System.currentTimeMillis();
         segmentUplinkedCounter = 0;
         segmentAbandonedCounter = 0;
+        // 内存队列
         carrier = new DataCarrier<>(CHANNEL_SIZE, BUFFER_SIZE);
         carrier.setBufferStrategy(BufferStrategy.IF_POSSIBLE);
+        // 这个类作为消费者
         carrier.consume(this, 1);
     }
 
@@ -85,6 +96,11 @@ public class TraceSegmentServiceClient implements BootService, IConsumer<TraceSe
 
     }
 
+    /**
+     * 消费消息
+     *
+     * @param data
+     */
     @Override
     public void consume(List<TraceSegment> data) {
         if (CONNECTED.equals(status)) {
@@ -121,6 +137,7 @@ public class TraceSegmentServiceClient implements BootService, IConsumer<TraceSe
 
             try {
                 for (TraceSegment segment : data) {
+                    // 对象转换 用于传输
                     SegmentObject upstreamSegment = segment.transform();
                     upstreamSegmentStreamObserver.onNext(upstreamSegment);
                 }
@@ -170,6 +187,7 @@ public class TraceSegmentServiceClient implements BootService, IConsumer<TraceSe
         if (traceSegment.isIgnore()) {
             return;
         }
+        // 将traceSegment添加到内存队列
         if (!carrier.produce(traceSegment)) {
             if (logger.isDebugEnable()) {
                 logger.debug("One trace segment has been abandoned, cause by buffer is full.");
@@ -177,6 +195,11 @@ public class TraceSegmentServiceClient implements BootService, IConsumer<TraceSe
         }
     }
 
+    /**
+     * 状态变更
+     *
+     * @param status
+     */
     @Override
     public void statusChanged(GRPCChannelStatus status) {
         if (CONNECTED.equals(status)) {
